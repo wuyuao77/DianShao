@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">电哨</string>
+    <string name="accessibility_description">用于保持电量监控服务在后台稳定运行</string>
+</resources>
