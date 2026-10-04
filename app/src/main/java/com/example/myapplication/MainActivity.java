@@ -8,10 +8,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -20,6 +24,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -30,14 +35,21 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_THRESHOLD = "battery_threshold";
     private static final String KEY_INTERVAL = "alert_interval";
     private static final String KEY_MONITOR_ENABLED = "monitor_enabled";
+    private static final String KEY_THEME_MODE = "theme_mode";
     private static final int REQ_NOTIFICATION = 1001;
+
+    private static final int THEME_FOLLOW_SYSTEM = 0;
+    private static final int THEME_LIGHT = 1;
+    private static final int THEME_DARK = 2;
 
     private TextView tvBatteryLevel;
     private TextView tvThreshold;
     private TextView tvInterval;
     private TextView tvMonitorStatus;
+    private TextView tvTheme;
     private LinearLayout layoutThreshold;
     private LinearLayout layoutInterval;
+    private LinearLayout layoutTheme;
     private SwitchCompat switchMonitor;
     private EditText etTestLevel;
     private EditText etTestDelay;
@@ -46,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private int threshold = 1;
     private int interval = 60;
     private boolean monitorEnabled = true;
+    private int themeMode = THEME_FOLLOW_SYSTEM;
     private boolean suppressSwitchCallback = false;
 
     private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
@@ -70,8 +83,10 @@ public class MainActivity extends AppCompatActivity {
         tvThreshold = findViewById(R.id.tvThreshold);
         tvInterval = findViewById(R.id.tvInterval);
         tvMonitorStatus = findViewById(R.id.tvMonitorStatus);
+        tvTheme = findViewById(R.id.tvTheme);
         layoutThreshold = findViewById(R.id.layoutThreshold);
         layoutInterval = findViewById(R.id.layoutInterval);
+        layoutTheme = findViewById(R.id.layoutTheme);
         switchMonitor = findViewById(R.id.switchMonitor);
         etTestLevel = findViewById(R.id.etTestLevel);
         etTestDelay = findViewById(R.id.etTestDelay);
@@ -81,13 +96,15 @@ public class MainActivity extends AppCompatActivity {
         threshold = prefs.getInt(KEY_THRESHOLD, 1);
         interval = prefs.getInt(KEY_INTERVAL, 60);
         monitorEnabled = prefs.getBoolean(KEY_MONITOR_ENABLED, true);
+        themeMode = prefs.getInt(KEY_THEME_MODE, THEME_FOLLOW_SYSTEM);
+
         tvThreshold.setText(threshold + "%");
         tvInterval.setText(interval + " 秒");
+        tvTheme.setText(themeLabel(themeMode));
 
         registerReceiver(batteryReceiver,
                 new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 
-        // 初始化开关
         suppressSwitchCallback = true;
         switchMonitor.setChecked(monitorEnabled);
         suppressSwitchCallback = false;
@@ -111,13 +128,92 @@ public class MainActivity extends AppCompatActivity {
 
         layoutThreshold.setOnClickListener(v -> showThresholdDialog());
         layoutInterval.setOnClickListener(v -> showIntervalDialog());
+        layoutTheme.setOnClickListener(v -> showThemeDialog());
         btnTest.setOnClickListener(v -> runTest());
 
-        // 首次启动时，如果开关是开的，确保服务在跑，并请求通知权限
         if (monitorEnabled) {
             requestNotificationPermissionIfNeeded();
             startMonitorService();
         }
+    }
+
+    private String themeLabel(int mode) {
+        switch (mode) {
+            case THEME_LIGHT: return "浅色";
+            case THEME_DARK: return "深色";
+            default: return "跟随系统";
+        }
+    }
+
+    private void applyTheme(int mode) {
+        switch (mode) {
+            case THEME_LIGHT:
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+                break;
+            case THEME_DARK:
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+                break;
+            default:
+                AppCompatDelegate.setDefaultNightMode(
+                        AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                break;
+        }
+    }
+
+    /**
+     * 外观选择对话框（使用自定义布局）
+     */
+    private void showThemeDialog() {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_theme, null);
+        LinearLayout optionFollowSystem = view.findViewById(R.id.optionFollowSystem);
+        LinearLayout optionLight = view.findViewById(R.id.optionLight);
+        LinearLayout optionDark = view.findViewById(R.id.optionDark);
+        TextView checkFollowSystem = view.findViewById(R.id.checkFollowSystem);
+        TextView checkLight = view.findViewById(R.id.checkLight);
+        TextView checkDark = view.findViewById(R.id.checkDark);
+        Button cancelBtn = view.findViewById(R.id.dialogThemeCancel);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(view)
+                .setCancelable(true)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        // 根据当前主题显示勾
+        updateThemeChecks(themeMode, checkFollowSystem, checkLight, checkDark);
+
+        optionFollowSystem.setOnClickListener(v -> {
+            selectTheme(THEME_FOLLOW_SYSTEM);
+            dialog.dismiss();
+        });
+        optionLight.setOnClickListener(v -> {
+            selectTheme(THEME_LIGHT);
+            dialog.dismiss();
+        });
+        optionDark.setOnClickListener(v -> {
+            selectTheme(THEME_DARK);
+            dialog.dismiss();
+        });
+        cancelBtn.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
+    private void updateThemeChecks(int mode, TextView follow, TextView light, TextView dark) {
+        follow.setVisibility(mode == THEME_FOLLOW_SYSTEM ? View.VISIBLE : View.INVISIBLE);
+        light.setVisibility(mode == THEME_LIGHT ? View.VISIBLE : View.INVISIBLE);
+        dark.setVisibility(mode == THEME_DARK ? View.VISIBLE : View.INVISIBLE);
+    }
+
+    private void selectTheme(int mode) {
+        themeMode = mode;
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit().putInt(KEY_THEME_MODE, themeMode).apply();
+        tvTheme.setText(themeLabel(themeMode));
+        applyTheme(themeMode);
     }
 
     private void updateMonitorStatusText() {
@@ -149,7 +245,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQ_NOTIFICATION) {
             if (grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 已授权，什么都不用做
+                // 已授权
             } else {
                 Toast.makeText(this,
                         "未授予通知权限，锁屏提醒可能无法显示",
@@ -175,24 +271,50 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showThresholdDialog() {
-        EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER);
-        input.setText(String.valueOf(threshold));
-        input.setSelection(input.getText().length());
-        input.setPadding(60, 40, 60, 40);
-        input.setTextColor(0xFF1C1C1E);
-        input.setTextSize(18);
+    private void showInputDialog(String title, String message, String initialValue,
+                                 OnInputConfirmed onConfirm) {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_input, null);
+        TextView titleView = view.findViewById(R.id.dialogTitle);
+        TextView msgView = view.findViewById(R.id.dialogMessage);
+        EditText input = view.findViewById(R.id.dialogInput);
+        Button cancelBtn = view.findViewById(R.id.dialogCancel);
+        Button confirmBtn = view.findViewById(R.id.dialogConfirm);
 
-        new AlertDialog.Builder(this)
-                .setTitle("低电量阈值")
-                .setMessage("当电量降至该值或以下时开始提醒")
-                .setView(input)
-                .setPositiveButton("保存", (d, w) -> {
-                    String s = input.getText().toString().trim();
-                    if (s.isEmpty()) return;
+        titleView.setText(title);
+        msgView.setText(message);
+        input.setText(initialValue);
+        input.setSelection(input.getText().length());
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(view)
+                .setCancelable(true)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        cancelBtn.setOnClickListener(v -> dialog.dismiss());
+        confirmBtn.setOnClickListener(v -> {
+            String s = input.getText().toString().trim();
+            dialog.dismiss();
+            onConfirm.onResult(s);
+        });
+
+        dialog.show();
+    }
+
+    private interface OnInputConfirmed {
+        void onResult(String value);
+    }
+
+    private void showThresholdDialog() {
+        showInputDialog("低电量阈值", "当电量降至该值或以下时开始提醒",
+                String.valueOf(threshold), value -> {
+                    if (value.isEmpty()) return;
                     try {
-                        int v = Integer.parseInt(s);
+                        int v = Integer.parseInt(value);
                         if (v >= 0 && v <= 100) {
                             threshold = v;
                             tvThreshold.setText(v + "%");
@@ -207,29 +329,15 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(this, "请输入有效数字",
                                 Toast.LENGTH_SHORT).show();
                     }
-                })
-                .setNegativeButton("取消", null)
-                .show();
+                });
     }
 
     private void showIntervalDialog() {
-        EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER);
-        input.setText(String.valueOf(interval));
-        input.setSelection(input.getText().length());
-        input.setPadding(60, 40, 60, 40);
-        input.setTextColor(0xFF1C1C1E);
-        input.setTextSize(18);
-
-        new AlertDialog.Builder(this)
-                .setTitle("重复提醒间隔")
-                .setMessage("未充电时每隔多少秒重复提醒一次（最小 5 秒）")
-                .setView(input)
-                .setPositiveButton("保存", (d, w) -> {
-                    String s = input.getText().toString().trim();
-                    if (s.isEmpty()) return;
+        showInputDialog("重复提醒间隔", "未充电时每隔多少秒重复提醒一次（最小 5 秒）",
+                String.valueOf(interval), value -> {
+                    if (value.isEmpty()) return;
                     try {
-                        int v = Integer.parseInt(s);
+                        int v = Integer.parseInt(value);
                         if (v >= 5 && v <= 3600) {
                             interval = v;
                             tvInterval.setText(v + " 秒");
@@ -244,9 +352,7 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(this, "请输入有效数字",
                                 Toast.LENGTH_SHORT).show();
                     }
-                })
-                .setNegativeButton("取消", null)
-                .show();
+                });
     }
 
     private void runTest() {

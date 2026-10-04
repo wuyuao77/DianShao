@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F2F2F7"
+    android:background="@color/page_bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -16,18 +16,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:text="电量提醒"
-            android:textColor="#1C1C1E"
-            android:textSize="28sp"
+            android:text="电哨"
+            android:textColor="@color/text_primary"
+            android:textSize="100sp"
             android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="电量过低时自动弹窗响铃"
-            android:textColor="#8E8E93"
-            android:textSize="15sp" />
+            android:text="电量过低时进行提醒"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
 
         <!-- 监控开关 -->
         <LinearLayout
@@ -50,7 +50,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="电量监控"
-                    android:textColor="#1C1C1E"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp" />
 
                 <TextView
@@ -69,6 +69,45 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
+        <!-- 主题设置行 -->
+        <LinearLayout
+            android:id="@+id/layoutTheme"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/card_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="外观"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvTheme"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="跟随系统"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="›"
+                android:textColor="@color/text_chevron"
+                android:textSize="22sp" />
+        </LinearLayout>
+
         <!-- 当前电量卡片 -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -82,7 +121,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="当前电量"
-                android:textColor="#8E8E93"
+                android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
 
             <TextView
@@ -91,7 +130,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="--%"
-                android:textColor="#1C1C1E"
+                android:textColor="@color/text_primary"
                 android:textSize="48sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -115,7 +154,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="低电量阈值"
-                android:textColor="#1C1C1E"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
             <TextView
@@ -123,7 +162,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="1%"
-                android:textColor="#8E8E93"
+                android:textColor="@color/text_secondary"
                 android:textSize="16sp" />
 
             <TextView
@@ -131,7 +170,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:text="›"
-                android:textColor="#C7C7CC"
+                android:textColor="@color/text_chevron"
                 android:textSize="22sp" />
         </LinearLayout>
 
@@ -154,7 +193,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="重复提醒间隔"
-                android:textColor="#1C1C1E"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
             <TextView
@@ -162,7 +201,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="60 秒"
-                android:textColor="#8E8E93"
+                android:textColor="@color/text_secondary"
                 android:textSize="16sp" />
 
             <TextView
@@ -170,7 +209,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:text="›"
-                android:textColor="#C7C7CC"
+                android:textColor="@color/text_chevron"
                 android:textSize="22sp" />
         </LinearLayout>
 
@@ -194,13 +233,14 @@
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_weight="1"
-                    android:background="#E5E5EA"
+                    android:background="@drawable/input_bg_rounded"
+                    android:backgroundTint="@null"
                     android:hint="模拟电量"
                     android:inputType="number"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
-                    android:textColor="#1C1C1E"
-                    android:textColorHint="#8E8E93"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
                     android:textSize="15sp" />
 
                 <EditText
@@ -209,13 +249,14 @@
                     android:layout_height="48dp"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
-                    android:background="#E5E5EA"
+                    android:background="@drawable/input_bg_rounded"
+                    android:backgroundTint="@null"
                     android:hint="延迟(秒)"
                     android:inputType="number"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
-                    android:textColor="#1C1C1E"
-                    android:textColorHint="#8E8E93"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
                     android:textSize="15sp" />
 
                 <Button
@@ -234,7 +275,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="延迟秒数用于测试后台提醒：填 10，点测试后立即锁屏，10 秒后应出现横幅提醒"
-                android:textColor="#8E8E93"
+                android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -244,7 +285,7 @@
             android:layout_marginTop="16dp"
             android:layout_marginBottom="24dp"
             android:text="提示：如需完全关闭后台服务，可在上方开关处关闭。关闭后不再有通知，也不再进行电量监控。"
-            android:textColor="#8E8E93"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp" />
 
     </LinearLayout>

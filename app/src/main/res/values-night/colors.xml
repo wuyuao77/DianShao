@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 对话框 -->
+    <color name="dialog_bg">#1C1C1E</color>
+    <color name="dialog_input_bg">#2C2C2E</color>
+    <color name="dialog_input_text">#FFFFFF</color>
+    <color name="dialog_input_hint">#8E8E93</color>
+
+    <!-- 页面 -->
+    <color name="page_bg">#000000</color>
+    <color name="card_bg">#1C1C1E</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#8E8E93</color>
+    <color name="text_chevron">#48484A</color>
+    <color name="input_bg">#2C2C2E</color>
+</resources>

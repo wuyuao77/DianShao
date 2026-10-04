@@ -43,6 +43,7 @@ public class BatteryService extends Service {
     private BroadcastReceiver batteryReceiver;
     private Handler handler;
     private Runnable repeatRunnable;
+    private Runnable testDelayRunnable;
 
     private int currentThreshold = 1;
     private int currentInterval = 60;
@@ -50,6 +51,9 @@ public class BatteryService extends Service {
     private boolean alerting = false;
     private boolean charging = false;
     private int lastLevel = -1;
+
+    // 测试模式：屏蔽真实电量，使用模拟值进行重复提醒
+    private boolean testMode = false;
 
     @Override
     public void onCreate() {
@@ -70,6 +74,7 @@ public class BatteryService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         // 关闭整个监控
         if (intent != null && ACTION_STOP_SERVICE.equals(intent.getAction())) {
+            exitTestMode();
             cancelAlertNotification();
             cancelRepeat();
             stopForeground(true);
@@ -77,9 +82,9 @@ public class BatteryService extends Service {
             return START_NOT_STICKY;
         }
 
-        // 用户已关闭监控开关，则不再运行
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         if (!prefs.getBoolean(KEY_MONITOR_ENABLED, true)) {
+            exitTestMode();
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
@@ -88,9 +93,10 @@ public class BatteryService extends Service {
         startForegroundInternal();
         loadSettings();
 
-        // 停止当前提醒
+        // 停止当前提醒（点“我知道了”）
         if (intent != null && ACTION_STOP_ALERT.equals(intent.getAction())) {
             alerting = false;
+            exitTestMode();
             cancelAlertNotification();
             cancelRepeat();
             return START_STICKY;
@@ -101,16 +107,49 @@ public class BatteryService extends Service {
             final int testLevel = intent.getIntExtra(EXTRA_TEST_LEVEL, -1);
             final int testDelay = intent.getIntExtra(EXTRA_TEST_DELAY, 0);
             if (testLevel >= 0) {
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        triggerAlert(testLevel);
-                    }
-                }, Math.max(0, testDelay) * 1000L);
+                startTest(testLevel, testDelay);
             }
         }
 
         return START_STICKY;
+    }
+
+    /**
+     * 启动测试模式：延迟指定秒数后触发提醒，并接入重复提醒机制
+     */
+    private void startTest(final int testLevel, int testDelay) {
+        // 取消上一次测试
+        if (testDelayRunnable != null) {
+            handler.removeCallbacks(testDelayRunnable);
+            testDelayRunnable = null;
+        }
+        cancelRepeat();
+        cancelAlertNotification();
+        alerting = false;
+
+        testMode = true;
+        lastLevel = testLevel;
+        charging = false;
+
+        testDelayRunnable = new Runnable() {
+            @Override
+            public void run() {
+                testDelayRunnable = null;
+                if (!testMode) return;
+                if (charging) return;
+                triggerAlert(testLevel);
+                scheduleRepeat();
+            }
+        };
+        handler.postDelayed(testDelayRunnable, Math.max(0, testDelay) * 1000L);
+    }
+
+    private void exitTestMode() {
+        testMode = false;
+        if (testDelayRunnable != null) {
+            handler.removeCallbacks(testDelayRunnable);
+            testDelayRunnable = null;
+        }
     }
 
     private void loadSettings() {
@@ -132,8 +171,20 @@ public class BatteryService extends Service {
 
         loadSettings();
 
-        lastLevel = percent;
         charging = nowCharging;
+
+        // 测试模式：只响应充电，忽略真实电量
+        if (testMode) {
+            if (nowCharging) {
+                exitTestMode();
+                alerting = false;
+                cancelAlertNotification();
+                cancelRepeat();
+            }
+            return;
+        }
+
+        lastLevel = percent;
 
         if (nowCharging) {
             alerting = false;
@@ -162,7 +213,6 @@ public class BatteryService extends Service {
                 repeatRunnable = null;
                 if (charging) return;
                 if (lastLevel < 0 || lastLevel > currentThreshold) return;
-                // 每次重复提醒都重新发通知，让铃声再次响起
                 alerting = true;
                 showAlertNotification(lastLevel);
                 scheduleRepeat();
@@ -215,7 +265,6 @@ public class BatteryService extends Service {
 
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (nm != null) {
-            // 先取消旧的，再发新的，确保每次都会重新响铃
             nm.cancel(NOTIFICATION_ID_ALERT);
             nm.notify(NOTIFICATION_ID_ALERT, n);
         }
@@ -239,7 +288,6 @@ public class BatteryService extends Service {
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager == null) return;
 
-            // 常驻通知频道：最低优先级，状态栏不显示图标
             NotificationChannel fg = new NotificationChannel(
                     CHANNEL_ID_FG, "后台运行", NotificationManager.IMPORTANCE_MIN);
             fg.setDescription("保持电量监控在后台运行");
@@ -249,7 +297,6 @@ public class BatteryService extends Service {
             fg.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
             manager.createNotificationChannel(fg);
 
-            // 提醒通知频道：高优先级，会弹出横幅，并播放默认闹钟铃声
             NotificationChannel alert = new NotificationChannel(
                     CHANNEL_ID_ALERT, "低电量提醒", NotificationManager.IMPORTANCE_HIGH);
             alert.setDescription("电量过低时弹出的横幅提醒");
@@ -282,6 +329,7 @@ public class BatteryService extends Service {
     public void onDestroy() {
         super.onDestroy();
         cancelRepeat();
+        exitTestMode();
         cancelAlertNotification();
         if (batteryReceiver != null) {
             try {
